@@ -11,23 +11,33 @@ from torch.utils.data import DataLoader
 from concept_utils import learn_concept_bank, ListDataset
 from model_utils import get_model
 
+## run learn_concepts.py --concept_dir=C:/Users/rielcheikh/Desktop/XAI/cce/concept_utils/broden_img --model_name=resnet18 --C=0.001 --out_dir=examples/CAVs
+
+
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+#https://stackoverflow.com/questions/35569042/ssl-certificate-verify-failed-with-python3#answer-49174340
+
+
 def config():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concept-dir", required=True, type=str, 
+    parser.add_argument("--concept_dir", type=str, default='C:/Users/rielcheikh/Desktop/XAI/cce/concept_utils/broden_img',
                         help="Directory containing concept images. See below for a detailed description.")
-    parser.add_argument("--out-dir", default="/oak/stanford/groups/jamesz/merty/cce", type=str,
+    
+    parser.add_argument("--out_dir", default="./examples/CAVs", type=str,
                         help="Where to save the concept bank.")
-    parser.add_argument("--model-name", default="resnet18", type=str, help="Name of the model to use.")
-    parser.add_argument("--device", default="cuda", type=str)
+   
+    parser.add_argument("--model_name", default="googlenet", type=str, help="Name of the model to use.")
+    parser.add_argument("--device", default="cpu", type=str)
     
     
-    parser.add_argument("--batch-size", default=32, type=int)
-    parser.add_argument("--num-workers", default=4, type=int)
+    parser.add_argument("--batch_size", default=32, type=int)
+    parser.add_argument("--num_workers", default=4, type=int)
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
-    parser.add_argument("--C", nargs="+", default=[1e-5, 1e-4, 0.001, 0.01, 0.1, 1.0], type=float, 
+    parser.add_argument("--C", nargs="+", default=[1e-5, 1e-4, 0.001, 0.01, 0.1, 1.0], type=float,  
                         help="Regularization parameter for SVMs. Can specify multiple values.")
     
-    parser.add_argument("--n-samples", default=50, type=int, 
+    parser.add_argument("--n_samples", default=50, type=int, 
                         help="Number of pairs of positive/negative samples used to train SVMs.")
     return parser.parse_args()
 
