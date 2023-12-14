@@ -56,8 +56,10 @@ def conceptual_counterfactual(embedding: torch.Tensor, label: torch.Tensor, conc
 
     # Normalize the concept vectors
     normalized_C = max_margins * concepts / concept_norms
+    
     # Compute the current distance of the sample to decision boundaries of SVMs
     margins = (torch.matmul(concepts, embedding.T) + concept_intercepts) / concept_norms
+    
     # Computing constraints for the concepts scores
     W_clamp_max = (max_margins * concept_norms -
                    concept_intercepts - torch.matmul(concepts, embedding.T))
@@ -65,7 +67,7 @@ def conceptual_counterfactual(embedding: torch.Tensor, label: torch.Tensor, conc
                    concept_intercepts - torch.matmul(concepts, embedding.T))
 
     W_clamp_max = (W_clamp_max / (max_margins * concept_norms)).T
-    W_clamp_min = (W_clamp_min / (max_margins * concept_norms)).T
+    W_clamp_min = (W_clamp_min / (min_margins * concept_norms)).T
 
     if enforce_validity:
         if kappa == "mean":
@@ -86,7 +88,6 @@ def conceptual_counterfactual(embedding: torch.Tensor, label: torch.Tensor, conc
     optimizer = optim.SGD([W], lr=step_size, momentum=momentum)
     history = []
     
-
     for i in range(n_steps):
         optimizer.zero_grad()
         new_embedding = embedding + torch.matmul(W, normalized_C)
