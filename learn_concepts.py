@@ -27,12 +27,12 @@ def config():
     parser.add_argument("--out_dir", default="./examples/CAVs", type=str,
                         help="Where to save the concept bank.")
    
-    parser.add_argument("--model_name", default="googlenet", type=str, help="Name of the model to use.")
+    parser.add_argument("--model_name", default="resnet_101", type=str, help="Name of the model to use.")
     parser.add_argument("--device", default="cpu", type=str)
     
     
     parser.add_argument("--batch_size", default=32, type=int)
-    parser.add_argument("--num_workers", default=4, type=int)
+    parser.add_argument("--num_workers", default=2, type=int)
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     parser.add_argument("--C", nargs="+", default=[1e-5, 1e-4, 0.001, 0.01, 0.1, 1.0], type=float,  
                         help="Regularization parameter for SVMs. Can specify multiple values.")
@@ -61,13 +61,22 @@ def main(args):
     for concept in concept_names:
         pos_ims = glob(os.path.join(args.concept_dir, concept, "positives", "*"))
         neg_ims = glob(os.path.join(args.concept_dir, concept, "negatives", "*"))
-        
+
         pos_dataset = ListDataset(pos_ims, preprocess=preprocess)
         neg_dataset = ListDataset(neg_ims, preprocess=preprocess)
         print(len(pos_dataset), len(neg_dataset))
         pos_loader = torch.utils.data.DataLoader(pos_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
         neg_loader = torch.utils.data.DataLoader(neg_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
         
+        """with open(args.model_name+'loader.pkl', 'wb') as fp:
+            pickle.dump(pos_loader, fp)
+            print('dictionary saved successfully to file')
+       
+        with open(args.model_name+'loader.pkl', 'rb') as fp:
+            hh = pickle.load(fp)"""
+        
+        """backbone = get_model(args, get_full_model=True)[0]
+        backbone.fc = torch.nn.Identity()"""
         cav_info = learn_concept_bank(pos_loader, neg_loader, backbone, args.n_samples, args.C, device=args.device)
         # Store CAV train acc, val acc, margin info for each regularization parameter and each concept
         for C in args.C:

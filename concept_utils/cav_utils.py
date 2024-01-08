@@ -75,6 +75,13 @@ def get_embeddings(loader, model, device="cuda"):
         np.array: Activations as a numpy array.
     """
     activations = None
+    
+    """for i, (images) in enumerate(loader):    
+        images2 = images.unsqueeze(1)
+        print(images.shape, images2.shape)
+        # Forward pass to get output/logits
+        outputs = model(images)"""
+    model.eval()
     for image in tqdm(loader):
         image = image.to(device)
         batch_act = model(image).squeeze().detach().cpu().numpy()
@@ -126,6 +133,7 @@ def learn_concept_bank(pos_loader, neg_loader, backbone, n_samples, C, device="c
         dict: Concept information, including the CAV and margin stats.
     """
     print("Extracting Embeddings: ")
+    
     pos_act = get_embeddings(pos_loader, backbone, device=device)
     neg_act = get_embeddings(neg_loader, backbone, device=device)
     

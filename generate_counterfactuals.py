@@ -11,8 +11,9 @@ from scipy.stats import rankdata
 import ast
 
 
-from model_utils import get_model, ResNetBottom, ResNetTop, GoogLeNetBottom, GoogLeNetTop
-from model_utils import imagenet_resnet_transforms as preprocess
+from model_utils import get_model, ResNetBottom, ResNetTop, GoogLeNetBottom, GoogLeNetTop, InceptionV3Bottom, InceptionV3Top
+from model_utils import imagenet_transforms as preprocess
+from model_utils import jj as jj
 from concept_utils import conceptual_counterfactual, ConceptBank
 
 global logits, expl
@@ -27,7 +28,7 @@ def config(model):
     parser.add_argument("--device", default="cpu", type=str)
     parser.add_argument("--seed", default=42, type=int, help="Random seed")
     parser.add_argument("--image-folder", default="../tcav/tcav/tcav_examples/image_models/imagenet/data/", type=str)
-    parser.add_argument("--explanation-folder", default="./examples/explanations/", type=str)
+    parser.add_argument("--explanation-folder", default="./examples/explanations/"+model+"/", type=str)
     parser.add_argument("--model_name", default=model)
     return parser.parse_args()
 
@@ -53,21 +54,26 @@ def viz_explanation(image, explanation, class_to_idx):
  
    
     
-def main(args):
+def main(args, model_name, targets, concepts):
     sns.set_context("poster")
     np.random.seed(args.seed)
-    model = 'resnet18'
+    #model_name = 'inceptionV3'
     
-    targets = ['zebra','dalmatian','lion','tiger','hippopotamus','leopard','gorilla','ox','chimpanzee','hamster','weasel','otter',
-                            'mouse','collie','beaver','skunk']
+    """targets = ['skunk','zebra','dalmatian','tiger','hippopotamus','leopard','lion','gorilla',
+               'ox','chimpanzee','hamster','weasel','otter','mouse','collie','beaver']"""
     
     # Load the model and Split the model into the backbone and the predictor layer
-    if model == "googlenet":
+    if model_name == "googlenet":
         model = get_model(args, get_full_model=True)[0]
         backbone, model_top = GoogLeNetBottom(model), GoogLeNetTop(model)
-    elif model == "resnet18":
+    elif model_name == "resnet18":
         model = get_model(args, get_full_model=True)[0]
         backbone, model_top = ResNetBottom(model), ResNetTop(model)
+    elif model_name == "inceptionv3":
+        model = get_model(args, get_full_model=True)[0]
+        backbone, model_top = InceptionV3Bottom(model), InceptionV3Top(model)
+    else:
+        raise ValueError(model_name)
     
     #model = torch.load(args.model_path)
     model = model.to(args.device)
@@ -90,13 +96,14 @@ def main(args):
     os.makedirs(args.explanation_folder, exist_ok=True)
     
     spearman_scores = {}
-
+    expl = {}
+    
     for target in targets:#os.listdir(args.image_folder):
+        expl[target] = []
         # Read the image and label
         for image_path in os.listdir(args.image_folder+target):
-            image = Image.open(os.path.join(args.image_folder, target, image_path))
-            print(image.size,"ààààààààà")
-            image_tensor = preprocess(image).to(args.device)
+            image = Image.open(os.path.join(args.image_folder, target, image_path)).convert('RGB')
+            image_tensor = preprocess(model_name)(image).to(args.device)
         
             cl = target#image_path.split("_")[0]
         
@@ -109,8 +116,7 @@ def main(args):
             # Get the model prediction
             pred = model_top(embedding).argmax(dim=1)
             logits.append(model_top(embedding))
-            #print(image_path, " -- ", cl, " -- ",idx_to_class[pred.item()])
-            #print(torch.max(model_top(embedding)).item())
+
             
             
             # Only evaluate over mistakes
@@ -125,7 +131,7 @@ def main(args):
             #print("__________________________", explanation)
             
             # Get explanations scores vector
-            expl.append(explanation['concept_scores'])
+            expl[target].append(explanation)
             
             # Visualize the explanation, and save it to a figure
             fig = viz_explanation(image, explanation, idx_to_class) 
@@ -134,10 +140,16 @@ def main(args):
             fig.savefig(os.path.join(args.explanation_folder,target, f"{image_path.split('.')[0]}_explanation.png"))
         
             print("_____________________________________________")
-            
+
+   
+    with open(args.explanation_folder+'/results.pkl', 'wb') as fp:
+        pickle.dump(expl, fp)
+        print('dictionary saved successfully to file')
+        
+    return expl
         
         
-    pred_v, exp_v = [], []
+""" pred_v, exp_v = [], []
     
     for i in range(len(logits)):
         pred_v.append([])
@@ -183,10 +195,14 @@ def compute_spearmans_rank(logits_vec, expl_vec, target, concept):
     R_exp = rankdata(exp)
     R_pred = rankdata(pred)
     
-    return np.corrcoef(R_exp, R_pred)
+    return np.corrcoef(R_exp, R_pred)"""
         
-if __name__ == "__main__":
-    model = 'resnet18'
-    args = config(model)
-    sp = main(args)
-    print(sp)
+"""if __name__ == "__main__":
+    model_name = 'inceptionv3'
+    args = config(model_name)
+    main(args, model_name)"""
+    
+def run_cce(model_name,targets, concepts):
+    args = config(model_name)
+    main(args, model_name, targets,concepts)
+    

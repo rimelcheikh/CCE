@@ -9,14 +9,36 @@ from torchvision import models, transforms
 imagenet_mean_pxs = np.array([0.485, 0.456, 0.406])
 imagenet_std_pxs = np.array([0.229, 0.224, 0.225])
 
-imagenet_resnet_transforms = transforms.Compose([
+transform_params = {'resnet': {'resize_shape': 224, 'center_crop': 224},
+                    'googlenet': {'resize_shape': 256, 'center_crop': 224},
+                    'inceptionv3': {'resize_shape': 299, 'center_crop': 299},
+                    }
+
+
+def imagenet_transforms(model): 
+    return transforms.Compose([
+                        transforms.Resize(transform_params[model]['resize_shape']),
+                        transforms.CenterCrop(transform_params[model]['center_crop']),
+                        transforms.ToTensor(),
+                        transforms.Normalize(imagenet_mean_pxs, imagenet_std_pxs)
+                    ])
+
+def imagenet_train_transforms(model): 
+    return transforms.Compose([
+                transforms.RandomResizedCrop(transform_params[model]['resize_shape']),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(imagenet_mean_pxs, imagenet_std_pxs)])
+
+
+jj = transforms.Compose([
                         transforms.Resize(224),
                         transforms.CenterCrop(224),
                         transforms.ToTensor(),
                         transforms.Normalize(imagenet_mean_pxs, imagenet_std_pxs)
                     ])
 
-imagenet_resnet_train_transforms = transforms.Compose([
+"""imagenet_resnet_train_transforms = transforms.Compose([
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -33,13 +55,14 @@ imagenet_googlenet_train_transforms = transforms.Compose([
                         transforms.RandomResizedCrop(256),
                         transforms.RandomHorizontalFlip(),
                         transforms.ToTensor(),
-                        transforms.Normalize(imagenet_mean_pxs, imagenet_std_pxs)])
+                        transforms.Normalize(imagenet_mean_pxs, imagenet_std_pxs)])"""
 
 class ResNetBottom(nn.Module):
     def __init__(self, original_model):
         super(ResNetBottom, self).__init__()
         self.features = nn.Sequential(*list(original_model.children())[:-1])
 
+    #Defines the computation performed at every call
     def forward(self, x):
         x = self.features(x)
         x = torch.flatten(x, 1)
@@ -49,6 +72,18 @@ class GoogLeNetBottom(nn.Module):
     def __init__(self, original_model):
         super(GoogLeNetBottom, self).__init__()
         self.features = nn.Sequential(*list(original_model.children())[:-1])
+
+    def forward(self, x):
+        x = self.features(x)
+        x = torch.flatten(x, 1)
+        return x
+
+class InceptionV3Bottom(nn.Module):
+    def __init__(self, original_model):
+        super(InceptionV3Bottom, self).__init__()
+        #self.features = nn.Sequential(*list(original_model.children())[:-1])#,nn.Identity())
+        self.features = original_model
+        self.features.fc = nn.Identity()
 
     def forward(self, x):
         x = self.features(x)
@@ -77,6 +112,17 @@ class GoogLeNetTop(nn.Module):
         x = self.features(x)
         x = nn.Softmax(dim=-1)(x)
         return x
+    
+class InceptionV3Top(nn.Module):
+    def __init__(self, original_model):
+        super(InceptionV3Top, self).__init__()
+        self.features = models.inception_v3(pretrained=True).fc#nn.Sequential(*[list(original_model.children())[-1]])
+        self.in_features = models.inception_v3(pretrained=True).fc.in_features
+
+    def forward(self, x):
+        x = self.features(x)
+        x = nn.Softmax(dim=-1)(x)
+        return x
 
 
 def set_parameter_requires_grad(model, eval_mode=True):
@@ -86,20 +132,29 @@ def set_parameter_requires_grad(model, eval_mode=True):
     return
 
 def get_model(args, get_full_model=False, eval_mode=True):
-    if args.model_name == "resnet18":
+    if args.model_name == "resnet_18":
         model = models.resnet18(pretrained=True)
         model = model.to(args.device)
-        train_preprocess = imagenet_resnet_train_transforms
-        val_preprocess = imagenet_resnet_transforms
+        train_preprocess = imagenet_train_transforms(args.model_name)
+        val_preprocess = imagenet_transforms(args.model_name)
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = ResNetBottom(model)
         model_top = ResNetTop(model)
 
-    elif args.model_name == "resnet50":
+    elif args.model_name == "resnet_50":        
         model = models.resnet50(pretrained=True)
         model = model.to(args.device)
-        train_preprocess = imagenet_resnet_train_transforms
-        val_preprocess = imagenet_resnet_transforms
+        train_preprocess = imagenet_train_transforms(args.model_name)
+        val_preprocess = imagenet_transforms(args.model_name)
+        set_parameter_requires_grad(model, eval_mode)
+        model_bottom = ResNetBottom(model)
+        model_top = ResNetTop(model)
+        
+    elif args.model_name == "resnet_101":        
+        model = models.resnet101(pretrained=True)
+        model = model.to(args.device)
+        train_preprocess = imagenet_train_transforms(args.model_name.split('_')[0])
+        val_preprocess = imagenet_transforms(args.model_name.split('_')[0])
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = ResNetBottom(model)
         model_top = ResNetTop(model)
@@ -107,11 +162,20 @@ def get_model(args, get_full_model=False, eval_mode=True):
     elif args.model_name == "googlenet":
         model = models.googlenet(pretrained=True)
         model = model.to(args.device)
-        train_preprocess = imagenet_googlenet_train_transforms
-        val_preprocess = imagenet_googlenet_transforms
+        train_preprocess = imagenet_train_transforms(args.model_name)
+        val_preprocess = imagenet_transforms(args.model_name)
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = GoogLeNetBottom(model)
         model_top = GoogLeNetTop(model)
+    
+    elif args.model_name == "inceptionv3":
+        model = models.inception_v3(pretrained=True)
+        model = model.to(args.device)
+        train_preprocess = imagenet_train_transforms(args.model_name)
+        val_preprocess = imagenet_transforms(args.model_name)
+        set_parameter_requires_grad(model, eval_mode)
+        model_bottom = InceptionV3Bottom(model)
+        model_top = InceptionV3Top(model)
 
     else:
         raise ValueError(args.model_name)
