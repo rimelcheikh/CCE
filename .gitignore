@@ -1,3 +1,7 @@
+#Generated
+examples/
+concept_utils/broden_img/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -49,14 +49,14 @@ concepts = ['ocean-s', 'desert-s', 'forest-s','black-c', 'brown-c', 'white-c', '
 
 dataset = 'imagenet'  
 bottleneck = ['mixed10']  #['mixed3a']#,'mixed3b','mixed4a','mixed4b','mixed4c','mixed4d','mixed4e','mixed5a','mixed5b']  
-model_name = "resnet_101"
+model_name = "inceptionv3"
 working_dir = './examples/explanations/'
 
 awa_rationales_mat = awa_rationales()
 
 
-if exists(working_dir+model_name+"/results.pkl"):
-    with open(working_dir+model_name+"/results.pkl", 'rb') as fp:
+if exists(working_dir+model_name+"/results2.pkl"):
+    with open(working_dir+model_name+"/results2.pkl", 'rb') as fp:
         cce_scores = pickle.load(fp)
 else: 
     cce_scores = run_cce(model_name,targets, concepts)
@@ -77,7 +77,7 @@ for t in targets:
         class_cce_scores[t][c] = sum(avg_concept[c])/len(avg_concept[c])
 
 #computing spearman when concept is fixed
-"""sp_coeff_targets = {}
+sp_coeff_targets = {}
 rationale_dict = {}
 for c in concepts:
     rationale_dict[c] = {}
@@ -103,7 +103,7 @@ with open(working_dir+model_name+'/result_fixed_concept.pkl', 'wb') as fp:
 
 
 with open(working_dir+model_name+'/result_fixed_concept.pkl', 'rb') as fp:
-    print('Results:', pickle.load(fp))"""
+    print('Results:', pickle.load(fp))
 
 
 
@@ -111,7 +111,7 @@ with open(working_dir+model_name+'/result_fixed_concept.pkl', 'rb') as fp:
 
 
 #computing spearman when (target,concept) are fixed
-"""sp_coeff = {}
+sp_coeff = {}
 #tcav_dict = {}
 rationale_dict = {}
 for target in targets:
@@ -126,7 +126,7 @@ for target in targets:
 
 with open(working_dir+model_name+'/rationales_dict_target.pkl', 'wb') as fp:
     pickle.dump(rationale_dict, fp)
-    print('Rationales dict saved successfully to file')"""
+    print('Rationales dict saved successfully to file')
 
 with open(working_dir+model_name+'/rationales_dict_target.pkl', 'rb') as fp:
     rationale_dict = pickle.load(fp)
