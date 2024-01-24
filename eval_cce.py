@@ -14,8 +14,7 @@ from scipy.stats import rankdata
 
 import pickle
 from os.path import exists
-from awa_rationales import *
-from generate_counterfactuals import run_cce
+from cce.generate_counterfactuals import run_cce
 
 
 #import tcav.repro_check as repro_check
@@ -37,34 +36,36 @@ result = {}
 
 #tf.compat.v1.enable_eager_execution() 
 
-targets = ['dalmatian','zebra','lion','tiger','hippopotamus','leopard','gorilla','ox','chimpanzee','hamster',
-           'weasel','otter','mouse','collie','beaver','skunk']
+"""targets = ['dalmatian','zebra','lion','tiger','hippopotamus','leopard','gorilla','ox','chimpanzee','hamster',
+           'weasel','otter','mouse','collie','beaver','skunk']"""
 
 
 #'plant','papyrus','paper','concrete','soapsuds','chess','crackle','rock','crystal','common marigold',
 #'marigold','double knit','knitwear', 'lace','rattlesnake master','track'
 #['striped','dotted','blotchy', 'braided', 'bubbly', 'bumpy', 'chequered', 'cobwebbed', 'cracked', 'crystalline', 'frilly', 'knitted', 'lacelike', 'scaly','veined']
 
-concepts = ['ocean-s', 'desert-s', 'forest-s','black-c', 'brown-c', 'white-c', 'blue-c', 'orange-c', 'red-c', 'yellow-c']
+"""concepts = ['ocean-s', 'desert-s', 'forest-s','black-c', 'brown-c', 'white-c', 'blue-c', 'orange-c', 'red-c', 'yellow-c']"""
 
-dataset = 'imagenet'  
+"""dataset = 'imagenet'  
 bottleneck = ['mixed10']  #['mixed3a']#,'mixed3b','mixed4a','mixed4b','mixed4c','mixed4d','mixed4e','mixed5a','mixed5b']  
 model_name = "inceptionv3"
-working_dir = './examples/explanations/'
-
-awa_rationales_mat = awa_rationales()
+working_dir = './examples/explanations/'"""
 
 
-if exists(working_dir+model_name+"/results2.pkl"):
-    with open(working_dir+model_name+"/results2.pkl", 'rb') as fp:
-        cce_scores = pickle.load(fp)
-else: 
-    cce_scores = run_cce(model_name,targets, concepts)
+
+def run_eval_cce(targets, concepts, dataset, concept_dataset, model_name, bottleneck, num_random_exp, alphas, model_cav, res_dir, data_dir):
+
+    if exists(res_dir+"explanations/results.pkl"):
+        with open(res_dir+"explanations/results.pkl", 'rb') as fp:
+            cce_scores = pickle.load(fp)
+    else: 
+        cce_scores = run_cce(targets, concepts, dataset, concept_dataset, bottleneck, model_name, res_dir, data_dir, num_random_exp, alphas, model_cav)
+#(model_name,targets, concepts)
 
 #cce_scores = run_cce(model_name,targets, concepts)
 
 #build class-wise cce scores 
-class_cce_scores = {}
+"""class_cce_scores = {}
 for t in targets:
     avg_concept = {}
     class_cce_scores[t] = {}
@@ -182,7 +183,7 @@ with open(working_dir+model_name+'/result_fixed_target.pkl', 'wb') as fp:
 
 
 with open(working_dir+model_name+'/result_fixed_target.pkl', 'rb') as fp:
-    print('Results:', pickle.load(fp))
+    print('Results:', pickle.load(fp))"""
 
 
 

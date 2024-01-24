@@ -11,10 +11,11 @@ from scipy.stats import rankdata
 import ast
 
 
-from model_utils import get_model, ResNetBottom, ResNetTop, GoogLeNetBottom, GoogLeNetTop, InceptionV3Bottom, InceptionV3Top
-from model_utils import imagenet_transforms as preprocess
-from model_utils import jj as jj
-from concept_utils import conceptual_counterfactual, ConceptBank
+from cce.model_utils import get_model, ResNetBottom, ResNetTop, GoogLeNetBottom, GoogLeNetTop, InceptionV3Bottom, InceptionV3Top
+from cce.model_utils import imagenet_transforms as preprocess
+from cce.model_utils import jj as jj
+from cce.concept_utils import conceptual_counterfactual, ConceptBank
+from cce.learn_concepts import learn_concepts
 
 global logits, expl
 logits, expl = [], []
@@ -54,29 +55,30 @@ def viz_explanation(image, explanation, class_to_idx):
  
    
     
-def main(args, model_name, targets, concepts):
+def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res_dir, data_dir, num_random_exp, alphas, model_cav, seed=42, device='cpu',):
     sns.set_context("poster")
-    np.random.seed(args.seed)
-    #model_name = 'inceptionV3'
+    np.random.seed(seed)
     
-    """targets = ['skunk','zebra','dalmatian','tiger','hippopotamus','leopard','lion','gorilla',
-               'ox','chimpanzee','hamster','weasel','otter','mouse','collie','beaver']"""
+    
+    if not os.path.exists(res_dir):
+        os.makedirs(res_dir)
+
     
     # Load the model and Split the model into the backbone and the predictor layer
     if model_name == "googlenet":
-        model = get_model(args, get_full_model=True)[0]
+        model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
         backbone, model_top = GoogLeNetBottom(model), GoogLeNetTop(model)
     elif model_name == "resnet18":
-        model = get_model(args, get_full_model=True)[0]
+        model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
         backbone, model_top = ResNetBottom(model), ResNetTop(model)
     elif model_name == "inceptionv3":
-        model = get_model(args, get_full_model=True)[0]
+        model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
         backbone, model_top = InceptionV3Bottom(model), InceptionV3Top(model)
     else:
         raise ValueError(model_name)
     
     #model = torch.load(args.model_path)
-    model = model.to(args.device)
+    model = model.to(device)
     model = model.eval()
     
     # TODO: Class indices are here, should be adapted based on training dataset labeling/ model output layer index-label matching
@@ -84,32 +86,34 @@ def main(args, model_name, targets, concepts):
     #idx_to_class = {0: "bear", 1: "bird", 2: "cat", 3: "dog", 4: "elephant"}
     
     #imagenet as training dataset
-    idx_to_class = ast.literal_eval(open('./examples/models/imagenet1k_idx_to_label.txt','r').read())
+    idx_to_class = ast.literal_eval(open('./cce/examples/models/imagenet1k_idx_to_label.txt','r').read())
     #idx_to_class = np.load('./examples/models/imagenet1k_idx_to_label.txt',allow_pickle=True)
     cls_to_idx = {v: k for k, v in idx_to_class.items()}
     
    
     
     # Load the concept bank
-    concept_bank = ConceptBank(pickle.load(open(args.concept_bank, "rb")), device=args.device)
+    #TODO : get concept dataset like TCAV
+    if not os.path.exists(res_dir+'/CAVs/'+model_name+'_'+str(alphas[0])+'.pkl'):
+        learn_concepts(data_dir+concept_dataset, res_dir+'/CAVs/', model_name, alphas)
+    concept_bank = ConceptBank(pickle.load(open(res_dir+'/CAVs/'+model_name+'_'+str(alphas[0])+'.pkl', "rb")), device=device)
 
-    os.makedirs(args.explanation_folder, exist_ok=True)
     
     spearman_scores = {}
     expl = {}
     
-    for target in targets:#os.listdir(args.image_folder):
+    for target in targets:#os.listdir(data_dir):
         expl[target] = []
         # Read the image and label
-        for image_path in os.listdir(args.image_folder+target):
-            image = Image.open(os.path.join(args.image_folder, target, image_path)).convert('RGB')
-            image_tensor = preprocess(model_name)(image).to(args.device)
+        for image_path in os.listdir(data_dir+'imgs/'+target):
+            image = Image.open(os.path.join(data_dir,'imgs/', target, image_path)).convert('RGB')
+            image_tensor = preprocess(model_name)(image).to(device)
         
             cl = target#image_path.split("_")[0]
         
             """if cl != 'cat':
                 continue"""
-            label = cls_to_idx[cl]*torch.ones(1, dtype=torch.long).to(args.device)
+            label = cls_to_idx[cl]*torch.ones(1, dtype=torch.long).to(device)
             
             # Get the embedding for the image
             embedding = backbone(image_tensor.unsqueeze(0))
@@ -135,14 +139,14 @@ def main(args, model_name, targets, concepts):
             
             # Visualize the explanation, and save it to a figure
             fig = viz_explanation(image, explanation, idx_to_class) 
-            if not os.path.exists(os.path.join(args.explanation_folder,target)):
-                os.makedirs(os.path.join(args.explanation_folder,target))
-            fig.savefig(os.path.join(args.explanation_folder,target, f"{image_path.split('.')[0]}_explanation.png"))
+            if not os.path.exists(os.path.join(res_dir,'explanations',target)):
+                os.makedirs(os.path.join(res_dir,'explanations',target))
+            fig.savefig(os.path.join(res_dir,'explanations',target, f"{image_path.split('.')[0]}_explanation.png"))
         
             print("_____________________________________________")
 
    
-    with open(args.explanation_folder+'/results.pkl', 'wb') as fp:
+    with open(res_dir+'/explanations/'+'/results.pkl', 'wb') as fp:
         pickle.dump(expl, fp)
         print('dictionary saved successfully to file')
         
@@ -202,7 +206,7 @@ def compute_spearmans_rank(logits_vec, expl_vec, target, concept):
     args = config(model_name)
     main(args, model_name)"""
     
-def run_cce(model_name,targets, concepts):
-    args = config(model_name)
-    main(args, model_name, targets,concepts)
+def run_cce(targets, concepts, dataset, concept_dataset, bottleneck, model_name, res_dir, data_dir, num_random_exp, alphas, model_cav):
+    #args = config(model_name)
+    main(targets, concepts, dataset, concept_dataset, bottleneck, model_name, res_dir, data_dir, num_random_exp, alphas, model_cav)
     

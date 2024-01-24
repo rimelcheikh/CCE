@@ -131,54 +131,54 @@ def set_parameter_requires_grad(model, eval_mode=True):
             param.requires_grad = False
     return
 
-def get_model(args, get_full_model=False, eval_mode=True):
-    if args.model_name == "resnet_18":
+def get_model(model_name, device, get_full_model=False, eval_mode=True):
+    if model_name == "resnet_18":
         model = models.resnet18(pretrained=True)
-        model = model.to(args.device)
-        train_preprocess = imagenet_train_transforms(args.model_name)
-        val_preprocess = imagenet_transforms(args.model_name)
+        model = model.to(device)
+        train_preprocess = imagenet_train_transforms(model_name)
+        val_preprocess = imagenet_transforms(model_name)
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = ResNetBottom(model)
         model_top = ResNetTop(model)
 
-    elif args.model_name == "resnet_50":        
+    elif model_name == "resnet_50":        
         model = models.resnet50(pretrained=True)
-        model = model.to(args.device)
-        train_preprocess = imagenet_train_transforms(args.model_name)
-        val_preprocess = imagenet_transforms(args.model_name)
+        model = model.to(device)
+        train_preprocess = imagenet_train_transforms(model_name)
+        val_preprocess = imagenet_transforms(model_name)
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = ResNetBottom(model)
         model_top = ResNetTop(model)
         
-    elif args.model_name == "resnet_101":        
+    elif model_name == "resnet_101":        
         model = models.resnet101(pretrained=True)
-        model = model.to(args.device)
-        train_preprocess = imagenet_train_transforms(args.model_name.split('_')[0])
-        val_preprocess = imagenet_transforms(args.model_name.split('_')[0])
+        model = model.to(device)
+        train_preprocess = imagenet_train_transforms(model_name.split('_')[0])
+        val_preprocess = imagenet_transforms(model_name.split('_')[0])
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = ResNetBottom(model)
         model_top = ResNetTop(model)
         
-    elif args.model_name == "googlenet":
+    elif model_name == "googlenet":
         model = models.googlenet(pretrained=True)
-        model = model.to(args.device)
-        train_preprocess = imagenet_train_transforms(args.model_name)
-        val_preprocess = imagenet_transforms(args.model_name)
+        model = model.to(device)
+        train_preprocess = imagenet_train_transforms(model_name)
+        val_preprocess = imagenet_transforms(model_name)
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = GoogLeNetBottom(model)
         model_top = GoogLeNetTop(model)
     
-    elif args.model_name == "inceptionv3":
+    elif model_name == "inceptionv3":
         model = models.inception_v3(pretrained=True)
-        model = model.to(args.device)
-        train_preprocess = imagenet_train_transforms(args.model_name)
-        val_preprocess = imagenet_transforms(args.model_name)
+        model = model.to(device)
+        train_preprocess = imagenet_train_transforms(model_name)
+        val_preprocess = imagenet_transforms(model_name)
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = InceptionV3Bottom(model)
         model_top = InceptionV3Top(model)
 
     else:
-        raise ValueError(args.model_name)
+        raise ValueError(model_name)
 
     if get_full_model:
         return model, model_bottom, model_top, train_preprocess, val_preprocess
