@@ -11,7 +11,7 @@ from scipy.stats import rankdata
 import ast
 
 
-from cce.model_utils import get_model, ResNetBottom, ResNetTop, GoogLeNetBottom, GoogLeNetTop, InceptionV3Bottom, InceptionV3Top
+from cce.model_utils import get_model, ResNetBottom, ResNetTop, GoogLeNetBottom, GoogLeNetTop, InceptionV3Bottom, InceptionV3Top, VGG16Bottom, VGG16Top
 from cce.model_utils import imagenet_transforms as preprocess
 from cce.model_utils import jj as jj
 from cce.concept_utils import conceptual_counterfactual, ConceptBank
@@ -68,12 +68,15 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
     if model_name == "googlenet":
         model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
         backbone, model_top = GoogLeNetBottom(model), GoogLeNetTop(model)
-    elif model_name == "resnet18":
+    elif model_name == "resnet_101":
         model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
         backbone, model_top = ResNetBottom(model), ResNetTop(model)
     elif model_name == "inceptionv3":
         model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
         backbone, model_top = InceptionV3Bottom(model), InceptionV3Top(model)
+    elif model_name == "vgg_16":
+        model = get_model(model_name, device = 'cpu', get_full_model=True)[0]
+        backbone, model_top = VGG16Bottom(model), VGG16Top(model)
     else:
         raise ValueError(model_name)
     
@@ -86,7 +89,11 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
     #idx_to_class = {0: "bear", 1: "bird", 2: "cat", 3: "dog", 4: "elephant"}
     
     #imagenet as training dataset
+    #TODO
     idx_to_class = ast.literal_eval(open('./cce/examples/models/imagenet1k_idx_to_label.txt','r').read())
+    
+    for k, v in idx_to_class.items():
+        idx_to_class[k] = v.split(',')[0]
     #idx_to_class = np.load('./examples/models/imagenet1k_idx_to_label.txt',allow_pickle=True)
     cls_to_idx = {v: k for k, v in idx_to_class.items()}
     
@@ -95,7 +102,7 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
     # Load the concept bank
     #TODO : get concept dataset like TCAV
     if not os.path.exists(res_dir+'/CAVs/'+model_name+'_'+str(alphas[0])+'.pkl'):
-        learn_concepts(data_dir+concept_dataset, res_dir+'/CAVs/', model_name, alphas)
+        learn_concepts(data_dir+'/cce_concepts/'+concept_dataset, res_dir+'/CAVs/', model_name, alphas)
     concept_bank = ConceptBank(pickle.load(open(res_dir+'/CAVs/'+model_name+'_'+str(alphas[0])+'.pkl', "rb")), device=device)
 
     
@@ -107,7 +114,7 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
         # Read the image and label
         for image_path in os.listdir(data_dir+'imgs/'+target):
             image = Image.open(os.path.join(data_dir,'imgs/', target, image_path)).convert('RGB')
-            image_tensor = preprocess(model_name)(image).to(device)
+            image_tensor = preprocess(model_name.split('_')[0])(image).to(device)
         
             cl = target#image_path.split("_")[0]
         

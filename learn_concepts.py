@@ -65,23 +65,24 @@ def learn_concepts(concepts_dir, res_dir, model_name, alphas, n_samples=50, seed
         pos_dataset = ListDataset(pos_ims, preprocess=preprocess)
         neg_dataset = ListDataset(neg_ims, preprocess=preprocess)
         print(len(pos_dataset), len(neg_dataset))
-        pos_loader = torch.utils.data.DataLoader(pos_dataset, batch_size=batch_size, shuffle=False)#, num_workers=num_workers)
-        neg_loader = torch.utils.data.DataLoader(neg_dataset, batch_size=batch_size, shuffle=False)#, num_workers=num_workers)
-        
-        """with open(args.model_name+'loader.pkl', 'wb') as fp:
-            pickle.dump(pos_loader, fp)
-            print('dictionary saved successfully to file')
-       
-        with open(args.model_name+'loader.pkl', 'rb') as fp:
-            hh = pickle.load(fp)"""
-        
-        """backbone = get_model(args, get_full_model=True)[0]
-        backbone.fc = torch.nn.Identity()"""
-        cav_info = learn_concept_bank(pos_loader, neg_loader, backbone, n_samples, alphas, device=device)
-        # Store CAV train acc, val acc, margin info for each regularization parameter and each concept
-        for C in alphas:
-            concept_lib[C][concept] = cav_info[C]
-            print(f"{concept} with C={C}: Training Accuracy: {cav_info[C][1]:.2f}, Validation Accuracy: {cav_info[C][2]:.2f}")
+        if (len(pos_dataset) > 0 and len(neg_dataset) >0 ):
+            pos_loader = torch.utils.data.DataLoader(pos_dataset, batch_size=batch_size, shuffle=False)#, num_workers=num_workers)
+            neg_loader = torch.utils.data.DataLoader(neg_dataset, batch_size=batch_size, shuffle=False)#, num_workers=num_workers)
+            
+            """with open(args.model_name+'loader.pkl', 'wb') as fp:
+                pickle.dump(pos_loader, fp)
+                print('dictionary saved successfully to file')
+           
+            with open(args.model_name+'loader.pkl', 'rb') as fp:
+                hh = pickle.load(fp)"""
+            
+            """backbone = get_model(args, get_full_model=True)[0]
+            backbone.fc = torch.nn.Identity()"""
+            cav_info = learn_concept_bank(pos_loader, neg_loader, backbone, n_samples, alphas, device=device)
+            # Store CAV train acc, val acc, margin info for each regularization parameter and each concept
+            for C in alphas:
+                concept_lib[C][concept] = cav_info[C]
+                print(f"{concept} with C={C}: Training Accuracy: {cav_info[C][1]:.2f}, Validation Accuracy: {cav_info[C][2]:.2f}")
     
     # Save CAV results 
     os.makedirs(res_dir, exist_ok=True)

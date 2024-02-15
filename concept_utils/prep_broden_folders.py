@@ -12,30 +12,43 @@ from PIL import Image
 # args.concept_dir/concept_name/positives/1.jpg, args.concept_dir/concept_name/positives/2.jpg, ...
 # args.concept_dir/concept_name/negatives/1.jpg, args.concept_dir/concept_name/negatives/2.jpg, ...
 
+rationales_dataset = 'awa'
+
+#broden_path = 'C:/Users/rielcheikh/Desktop/XAI/XAI-eval/data/imgs'
+concepts_path = 'C:/Users/rielcheikh/Desktop/XAI/XAI-Eval/data/imgs'
+random_path = 'C:/Users/rielcheikh/Desktop/XAI/XAI-eval/data/imgs'
+dest_path = 'C:/Users/rielcheikh/Desktop/XAI/XAI-eval/data/cce_concepts/'+rationales_dataset
 
 
-broden_path = 'C:/Users/rielcheikh/Desktop/XAI/tcav/tcav/tcav_examples/image_models/imagenet/data'
-dest_path = 'C:/Users/rielcheikh/Desktop/XAI/cce/concept_utils/broden_img'
+    #to fix : leaf, text, leg, ear, screen, metal, plastic, leather, beak, head, nose, eye, torso, hand, arm
+    #check if same meaning : wing,
+concepts_to_make = ['tail', 'mouth', 'hair', 'face', 'wing', 
+                    'wheel', 'door', 'headlight', 'taillight', 'engine', 'horn', 'saddle', 'flower', 'pot', 
+                    'skin', 'wood', 'glass']
+concepts_to_make = os.listdir(concepts_path)
 
-concepts_to_make = ['ocean-s', 'desert-s', 'forest-s','black-c', 'brown-c', 'white-c', 'blue-c', 'orange-c', 'red-c', 'yellow-c']
+concepts_to_make = ['ocean-s', 'desert-s', 'forest-s', 'water-s', 'cave-s', 'black-c', 'brown-c', 'white-c', 'blue-c', 'orange-c', 'red-c', 'yellow-c']
+
+
 
 random_i = 0
 
 if not os.path.exists(dest_path):
     os.makedirs(dest_path)
-
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 for concept in concepts_to_make:
     
     if not os.path.exists(dest_path+'/'+concept+ "/positives/"):
         os.makedirs(dest_path+'/'+concept+ "/positives/")
 
-    for (root,dirs,files) in os.walk(broden_path):
+    for (root,dirs,files) in os.walk(concepts_path):
         if (root.split("\\")[-1] == concept):
             i = 1
             for file in files:
-                 with Image.open(broden_path+'/'+concept+'/'+file) as im:
-                     im.save(dest_path+'/'+concept + "/positives/"+str(i)+".jpeg")
+                 with Image.open(concepts_path+'/'+concept+'/'+file) as im:
+                     im.convert('RGB').save(dest_path+'/'+concept + "/positives/"+str(i)+".jpeg")
                      i+=1
                         
                     
@@ -43,12 +56,15 @@ for concept in concepts_to_make:
     if not os.path.exists(dest_path+'/'+concept+ "/negatives/"):
         os.makedirs(dest_path+'/'+concept+ "/negatives/")
 
-    for (root,dirs,files) in os.walk(broden_path):
+    for (root,dirs,files) in os.walk(random_path):
         if (root.split("\\")[-1] == 'random500_'+str(random_i)):
             i = 1
             for file in files:
-                 with Image.open(broden_path+'/random500_'+str(random_i)+'/'+file).convert('RGB') as im:
-                     im.save(dest_path+'/'+concept + "/negatives/"+str(i)+".jpeg")
-                     i+=1
+                try:
+                     with Image.open(random_path+'/random500_'+str(random_i)+'/'+file).convert('RGB') as im:
+                         im.convert('RGB').save(dest_path+'/'+concept + "/negatives/"+str(i)+".jpeg")
+                         i+=1
+                except:
+                    print('error with getting random image : '+ random_path+'/random500_'+str(random_i)+'/'+file)
     random_i += 1    
                         

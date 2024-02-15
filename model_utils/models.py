@@ -12,6 +12,7 @@ imagenet_std_pxs = np.array([0.229, 0.224, 0.225])
 transform_params = {'resnet': {'resize_shape': 224, 'center_crop': 224},
                     'googlenet': {'resize_shape': 256, 'center_crop': 224},
                     'inceptionv3': {'resize_shape': 299, 'center_crop': 299},
+                    'vgg': {'resize_shape': 256, 'center_crop': 224},
                     }
 
 
@@ -90,6 +91,16 @@ class InceptionV3Bottom(nn.Module):
         x = torch.flatten(x, 1)
         return x
 
+class VGG16Bottom(nn.Module):
+    def __init__(self, original_model):
+        super(VGG16Bottom, self).__init__()
+        self.features = nn.Sequential(*list(original_model.children())[:-1])
+
+    def forward(self, x):
+        x = self.features(x)
+        x = torch.flatten(x, 1)
+        return x
+
 
 class ResNetTop(nn.Module):
     def __init__(self, original_model):
@@ -118,6 +129,17 @@ class InceptionV3Top(nn.Module):
         super(InceptionV3Top, self).__init__()
         self.features = models.inception_v3(pretrained=True).fc#nn.Sequential(*[list(original_model.children())[-1]])
         self.in_features = models.inception_v3(pretrained=True).fc.in_features
+
+    def forward(self, x):
+        x = self.features(x)
+        x = nn.Softmax(dim=-1)(x)
+        return x
+    
+class VGG16Top(nn.Module):
+    def __init__(self, original_model):
+        super(VGG16Top, self).__init__()
+        self.features = nn.Sequential(*[list(original_model.children())[-1]])
+        self.in_features = original_model.classifier[0].in_features
 
     def forward(self, x):
         x = self.features(x)
@@ -176,6 +198,15 @@ def get_model(model_name, device, get_full_model=False, eval_mode=True):
         set_parameter_requires_grad(model, eval_mode)
         model_bottom = InceptionV3Bottom(model)
         model_top = InceptionV3Top(model)
+        
+    elif model_name == "vgg_16":
+        model = models.vgg16(pretrained=True)
+        model = model.to(device)
+        train_preprocess = imagenet_train_transforms(model_name)
+        val_preprocess = imagenet_transforms(model_name)
+        set_parameter_requires_grad(model, eval_mode)
+        model_bottom = VGG16Bottom(model)
+        model_top = VGG16Top(model)
 
     else:
         raise ValueError(model_name)

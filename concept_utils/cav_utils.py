@@ -133,7 +133,7 @@ def learn_concept_bank(pos_loader, neg_loader, backbone, n_samples, C, device="c
         dict: Concept information, including the CAV and margin stats.
     """
     print("Extracting Embeddings: ")
-    
+    print(':::::::::::::::')
     pos_act = get_embeddings(pos_loader, backbone, device=device)
     neg_act = get_embeddings(neg_loader, backbone, device=device)
     
