@@ -97,6 +97,8 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
     #idx_to_class = np.load('./examples/models/imagenet1k_idx_to_label.txt',allow_pickle=True)
     cls_to_idx = {v: k for k, v in idx_to_class.items()}
     
+    
+    
    
     
     # Load the concept bank
@@ -120,7 +122,20 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
         
             """if cl != 'cat':
                 continue"""
-            label = cls_to_idx[cl]*torch.ones(1, dtype=torch.long).to(device)
+            
+            #return self.labels.index(label)
+            try : 
+                label = cls_to_idx[cl]*torch.ones(1, dtype=torch.long).to(device)
+            
+            except:
+                with open('./data/dict_apy_imagenet_classes.pkl','rb') as f:
+                    corr = pickle.load(f)
+                for k in corr.keys():
+                    if cl == k:
+                        label = []
+                        for i in corr[k]:
+                            label.append(cls_to_idx[i]*torch.ones(1, dtype=torch.long).to(device))
+            
             
             # Get the embedding for the image
             embedding = backbone(image_tensor.unsqueeze(0))
@@ -131,26 +146,51 @@ def main(targets, concept, dataset, concept_dataset, bottleneck, model_name, res
             
             
             # Only evaluate over mistakes
-            if pred.item() == label.item():
-                print(f"Warning: {image_path} is correctly classified, but we'll still try to increase the confidence if you really want that.")
+            if type(label) == list:
+                for l in label:
+                    if pred.item() == l.item():
+                        print(f"Warning: {image_path} is correctly classified, but we'll still try to increase the confidence if you really want that.")
+                    
+                    # Get the embedding for the image
+                    embedding = backbone(image_tensor.unsqueeze(0)).detach()
+                    # Run CCE
+                    explanation = conceptual_counterfactual(embedding, l, concept_bank, model_top) 
+                    #print("__________________________", explanation)
+                    
+                # Get explanations scores vector
+                expl[target].append(explanation)
+                
+                # Visualize the explanation, and save it to a figure
+                fig = viz_explanation(image, explanation, idx_to_class) 
+                if not os.path.exists(os.path.join(res_dir,'explanations',target)):
+                    os.makedirs(os.path.join(res_dir,'explanations',target))
+                fig.savefig(os.path.join(res_dir,'explanations',target, f"{image_path.split('.')[0]}_explanation.png"))
             
-            #else:
-            # Get the embedding for the image
-            embedding = backbone(image_tensor.unsqueeze(0)).detach()
-            # Run CCE
-            explanation = conceptual_counterfactual(embedding, label, concept_bank, model_top) 
-            #print("__________________________", explanation)
+                print("_____________________________________________")
+   
             
-            # Get explanations scores vector
-            expl[target].append(explanation)
+       
+        else:
+                if pred.item() == label.item():
+                    print(f"Warning: {image_path} is correctly classified, but we'll still try to increase the confidence if you really want that.")
+           
+                
+                # Get the embedding for the image
+                embedding = backbone(image_tensor.unsqueeze(0)).detach()
+                # Run CCE
+                explanation = conceptual_counterfactual(embedding, label, concept_bank, model_top) 
+                #print("__________________________", explanation)
+                
+                # Get explanations scores vector
+                expl[target].append(explanation)
+                
+                # Visualize the explanation, and save it to a figure
+                fig = viz_explanation(image, explanation, idx_to_class) 
+                if not os.path.exists(os.path.join(res_dir,'explanations',target)):
+                    os.makedirs(os.path.join(res_dir,'explanations',target))
+                fig.savefig(os.path.join(res_dir,'explanations',target, f"{image_path.split('.')[0]}_explanation.png"))
             
-            # Visualize the explanation, and save it to a figure
-            fig = viz_explanation(image, explanation, idx_to_class) 
-            if not os.path.exists(os.path.join(res_dir,'explanations',target)):
-                os.makedirs(os.path.join(res_dir,'explanations',target))
-            fig.savefig(os.path.join(res_dir,'explanations',target, f"{image_path.split('.')[0]}_explanation.png"))
-        
-            print("_____________________________________________")
+                print("_____________________________________________")
 
    
     with open(res_dir+'/explanations/'+'/results.pkl', 'wb') as fp:
